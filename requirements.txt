@@ -5,3 +5,4 @@ requests==2.32.5
 selene==2.0.0rc9
 python-dotenv==1.2.1
 beautifulsoup4==4.12.3
+curlify==2.2.1

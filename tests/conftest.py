@@ -1,5 +1,6 @@
 import os
 
+import allure
 import pytest
 from dotenv import load_dotenv
 from selene import browser
@@ -14,13 +15,14 @@ BASE_URL = os.getenv("BASE_URL")
 
 @pytest.fixture()
 def signed_in_user_cookie():
-    email, password = os.getenv("EMAIL"), os.getenv("PASSWORD")
+    with allure.step("Получить cookie авторизованного пользователя"):
+        email, password = os.getenv("EMAIL"), os.getenv("PASSWORD")
 
-    response = LoginClient(BASE_URL).login(email, password)
+        response = LoginClient(BASE_URL).login(email, password)
 
-    return {
-        "NOPCOMMERCE.AUTH": response.cookies["NOPCOMMERCE.AUTH"]
-    }
+        return {
+            "NOPCOMMERCE.AUTH": response.cookies["NOPCOMMERCE.AUTH"]
+        }
 
 
 @pytest.fixture()
@@ -30,21 +32,25 @@ def cart_client(signed_in_user_cookie):
 
 @pytest.fixture()
 def setup_browser(signed_in_user_cookie):
-    browser.config.base_url = BASE_URL
-    browser.open("/")
+    with allure.step("Настроить браузер и авторизовать пользователя"):
+        browser.config.base_url = BASE_URL
+        browser.open("/")
 
-    cookie_value = signed_in_user_cookie["NOPCOMMERCE.AUTH"]
-    browser.driver.add_cookie({"name": "NOPCOMMERCE.AUTH", "value": cookie_value})
+        cookie_value = signed_in_user_cookie["NOPCOMMERCE.AUTH"]
+        browser.driver.add_cookie({"name": "NOPCOMMERCE.AUTH", "value": cookie_value})
 
-    browser.driver.refresh()
+        browser.driver.refresh()
 
     yield
 
-    browser.quit()
+    with allure.step("Закрыть браузер"):
+        browser.quit()
 
 
 @pytest.fixture()
 def add_product_to_cart(cart_client):
-    cart_client.add_to_cart(Product.SMARTPHONE, quantity=3)
+    with allure.step("Предустановка: добавить Smartphone (кол-во: 3) в корзину"):
+        cart_client.add_to_cart(Product.SMARTPHONE, quantity=3)
     yield
-    cart_client.remove_all_from_cart()
+    with allure.step("Очистка: удалить все товары из корзины"):
+        cart_client.remove_all_from_cart()

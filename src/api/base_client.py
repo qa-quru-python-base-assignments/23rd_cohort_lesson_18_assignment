@@ -1,6 +1,8 @@
-import logging
-
+import allure
 import requests
+
+from src.utils.allure_attach import attach_request_response
+from src.utils.logger import setup_logger
 
 
 class BaseClient:
@@ -9,22 +11,28 @@ class BaseClient:
         self.session = requests.Session()
         self.cookies = cookies
 
-        self.logger = logging.getLogger(__name__)
+        self.logger = setup_logger(self.__class__.__name__)
 
     def _request(self, method: str, endpoint: str, **kwargs):
         url = f"{self.base_url}{endpoint}"
 
-        self.logger.info(f"Request: {method} {url}")
+        with allure.step(f"API {method} {endpoint}"):
+            self.logger.info(f"Request: {method} {url}")
 
-        try:
-            response = self.session.request(method, url, cookies=self.cookies, **kwargs)
+            try:
+                response = self.session.request(method, url, cookies=self.cookies, **kwargs)
+                self.logger.info(f"Response: {response.status_code}")
 
-            self.logger.info(f"Response: {response.status_code}")
+                attach_request_response(
+                    method=method,
+                    endpoint=endpoint,
+                    response=response,
+                )
 
-            return response
-        except requests.exceptions.RequestException as e:
-            self.logger.error(f"Request failed: {e}")
-            raise
+                return response
+            except requests.exceptions.RequestException as e:
+                self.logger.error(f"Request failed: {e}")
+                raise
 
     def get(self, endpoint: str, params: dict = None, **kwargs):
         return self._request('GET', endpoint, params=params, **kwargs)
